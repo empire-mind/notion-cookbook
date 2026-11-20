@@ -161,12 +161,21 @@ describe("pickMeeting", () => {
   })
 
   it("between meetings, an all-day event in progress beats the next meeting", () => {
-    expect(pickMeeting(rows, Date.parse("2026-09-29T19:00:00Z"))?.row.id).toBe(
+    const between = Date.parse("2026-09-29T19:00:00Z")
+    // Timed meetings are in Los Angeles. A date-only event belongs to the viewer’s local day.
+    const viewerDay = new Intl.DateTimeFormat("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(between)
+    const timedRows = rows.slice(1)
+    const currentDay = row("all-day", { start: viewerDay })
+    expect(pickMeeting([currentDay, ...timedRows], between)?.row.id).toBe(
       "all-day"
     )
-    expect(
-      pickMeeting(rows.slice(1), Date.parse("2026-09-29T19:00:00Z"))?.row.id
-    ).toBe("later")
+    expect(pickMeeting(timedRows, between)?.row.id).toBe("later")
+    const expired = row("expired", { start: "2026-09-27" })
+    expect(pickMeeting([expired, ...timedRows], between)?.row.id).toBe("later")
   })
 
   it("returns null when nothing is left", () => {
